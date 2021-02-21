@@ -5,6 +5,7 @@ using Quartz.Impl;
 using Quartz.Impl.Matchers;
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -22,8 +23,9 @@ namespace SilkierQuartz
             IScheduler scheduler = app.GetScheduler();
             {
                 var jobData = new JobDataMap();
-                jobData.Put("DateFrom", DateTime.Now);
-                jobData.Put("QuartzAssembly", File.ReadAllBytes(typeof(IScheduler).Assembly.Location));
+                // We are not using in-memory job store for this demo, that causing jobdatamap got to be string
+                jobData.Put("DateFrom", DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                jobData.Put("QuartzAssembly", "Some random space");
 
                 var job = JobBuilder.Create<DummyJob>()
                     .WithIdentity("Sales", "REPORTS")

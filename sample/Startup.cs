@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 using SilkierQuartz.Example.Jobs;
@@ -26,7 +27,8 @@ namespace SilkierQuartz.Example
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
-            services.AddSilkierQuartz();
+            services.AddQuartzManagedNode(Configuration);
+            //services.AddSilkierQuartz();
             services.AddOptions();
             services.Configure<AppSettings>(Configuration);
             services.Configure<InjectProperty>(options => { options.WriteText = "This is inject string"; });
@@ -70,7 +72,8 @@ namespace SilkierQuartz.Example
             });
             //How to compatible old code to SilkierQuartz
             //将旧的原来的规划Job的代码进行移植兼容的示例
-            app.SchedulerJobs();
+            //Remove this after first run cause the jobs was saved
+            //app.SchedulerJobs();
 
 
             #region  不使用 SilkierQuartzAttribe 属性的进行注册和使用的IJob，这里通过UseQuartzJob的IJob必须在  ConfigureServices进行AddQuartzJob
@@ -101,6 +104,35 @@ namespace SilkierQuartz.Example
                 return result;
             });
             #endregion
+        }
+    }
+
+    public static class CustomExtensionsMethods
+    {
+        public static IServiceCollection AddQuartzManagedNode(this IServiceCollection services, IConfiguration configuration)
+        {
+            //Set config to AdoJobStore with SQL Server
+            services.Configure<QuartzOptions>(configuration.GetSection("Quartz"));
+            var sectionData = configuration.GetSection("Quartz");
+            var dictionaryData = sectionData.GetChildren().ToDictionary(x => x.Key, x => x.Value);
+            var quartzConfig = new NameValueCollection();
+            foreach (var kvp in dictionaryData)
+            {
+                string value = null;
+                if (kvp.Value != null)
+                {
+                    value = kvp.Value;
+                }
+                quartzConfig.Add(kvp.Key, value);
+            }
+
+            services.AddQuartz(quartzConfig, q =>
+            {
+                q.UseMicrosoftDependencyInjectionScopedJobFactory();
+                q.UseSimpleTypeLoader();
+            });
+
+            return services;
         }
     }
 }
