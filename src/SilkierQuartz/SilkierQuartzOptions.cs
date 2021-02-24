@@ -23,6 +23,8 @@ namespace SilkierQuartz
 
         public IScheduler Scheduler { get; set; }
 
+        public bool IsAuthenticationPersist { get; set; }
+
         /// <summary>
         /// Supported value types in job data map.
         /// </summary>

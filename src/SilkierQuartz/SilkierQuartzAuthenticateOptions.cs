@@ -7,10 +7,11 @@
         public bool? IsPersist { get; set; }
     }
 
-    public class SilkierQuartzAuthenticateConfig
+    internal class SilkierQuartzAuthenticateConfig
     {
-        public static string VirtualPathRoot = string.Empty;
-        public const string AuthScheme = "SilkierQuartzAuth";
-        public const string SilkierQuartzSpecificClaim = "SilkierQuartzManage";
+        internal static string VirtualPathRoot = string.Empty;
+        internal static bool IsPersist;
+        internal const string AuthScheme = "SilkierQuartzAuth";
+        internal const string SilkierQuartzSpecificClaim = "SilkierQuartzManage";
     }
 }

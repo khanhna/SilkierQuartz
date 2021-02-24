@@ -88,6 +88,7 @@ namespace SilkierQuartz
             });
             
             SilkierQuartzAuthenticateConfig.VirtualPathRoot = options.VirtualPathRoot;
+            SilkierQuartzAuthenticateConfig.IsPersist = options.IsAuthenticationPersist;
             app.UseEndpoints(endpoints =>
            {
                endpoints.MapControllerRoute(nameof(SilkierQuartz), $"{options.VirtualPathRoot}/{{controller=Scheduler}}/{{action=Index}}");
@@ -178,8 +179,11 @@ namespace SilkierQuartz
                     cfg.Cookie.Name = SilkierQuartzAuthenticateConfig.AuthScheme;
                     cfg.LoginPath = $"{SilkierQuartzAuthenticateConfig.VirtualPathRoot}/Authenticate/Login";
                     cfg.AccessDeniedPath = $"{SilkierQuartzAuthenticateConfig.VirtualPathRoot}/Authenticate/Login";
-                    cfg.ExpireTimeSpan = TimeSpan.FromDays(7);
-                    cfg.SlidingExpiration = true;
+                    if (SilkierQuartzAuthenticateConfig.IsPersist)
+                    {
+                        cfg.ExpireTimeSpan = TimeSpan.FromDays(7);
+                        cfg.SlidingExpiration = true;
+                    }
                 });
 
             services.AddAuthorization(opts =>
