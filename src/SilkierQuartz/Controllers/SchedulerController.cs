@@ -9,9 +9,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SilkierQuartz.Controllers
 {
+    [Authorize(SilkierQuartzAuthenticateConfig.AuthScheme)]
     public class SchedulerController : PageControllerBase
     {
         [HttpGet]

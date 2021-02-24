@@ -86,10 +86,13 @@ namespace SilkierQuartz
                 context.Items[typeof(Services)] = services;
                 await next.Invoke();
             });
-
+            
+            SilkierQuartzAuthenticateConfig.VirtualPathRoot = options.VirtualPathRoot;
             app.UseEndpoints(endpoints =>
            {
                endpoints.MapControllerRoute(nameof(SilkierQuartz), $"{options.VirtualPathRoot}/{{controller=Scheduler}}/{{action=Index}}");
+               endpoints.MapControllerRoute($"{nameof(SilkierQuartz)}Authenticate",
+                   $"{options.VirtualPathRoot}{{controller=Authenticate}}/{{action=Login}}");
            });
 
             var types = GetSilkierQuartzJobs();
@@ -162,9 +165,32 @@ namespace SilkierQuartz
 
         public static IServiceCollection AddSilkierQuartz(this IServiceCollection services, Action<NameValueCollection> stdSchedulerFactoryOptions = null,Func<List<Assembly>> jobsasmlist=null)
         {
+            services.AddSingleton(x => new SilkierQuartzAuthenticateOptions()
+                {UserName = "admin", Password = "password"});
             services.AddControllers()
                 .AddApplicationPart(Assembly.GetExecutingAssembly())
                 .AddNewtonsoftJson();
+
+            services.AddAuthentication(SilkierQuartzAuthenticateConfig.AuthScheme).AddCookie(
+                SilkierQuartzAuthenticateConfig.AuthScheme,
+                cfg =>
+                {
+                    cfg.Cookie.Name = SilkierQuartzAuthenticateConfig.AuthScheme;
+                    cfg.LoginPath = $"{SilkierQuartzAuthenticateConfig.VirtualPathRoot}/Authenticate/Login";
+                    cfg.AccessDeniedPath = $"{SilkierQuartzAuthenticateConfig.VirtualPathRoot}/Authenticate/Login";
+                    cfg.ExpireTimeSpan = TimeSpan.FromDays(7);
+                    cfg.SlidingExpiration = true;
+                });
+
+            services.AddAuthorization(opts =>
+            {
+                opts.AddPolicy(SilkierQuartzAuthenticateConfig.AuthScheme, authBuilder =>
+                {
+                    authBuilder.RequireAuthenticatedUser();
+                    authBuilder.RequireClaim(SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaim);
+                });
+            });
+
             services.UseQuartzHostedService(stdSchedulerFactoryOptions);
             
             var types = GetSilkierQuartzJobs(jobsasmlist?.Invoke());
