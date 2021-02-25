@@ -87,11 +87,14 @@ namespace SilkierQuartz
                 await next.Invoke();
             });
             
-            SilkierQuartzAuthenticateConfig.VirtualPathRoot = options.VirtualPathRoot;
-            SilkierQuartzAuthenticateConfig.IsPersist = options.IsAuthenticationPersist;
             app.UseEndpoints(endpoints =>
            {
                endpoints.MapControllerRoute(nameof(SilkierQuartz), $"{options.VirtualPathRoot}/{{controller=Scheduler}}/{{action=Index}}");
+
+               SilkierQuartzAuthenticateConfig.VirtualPathRoot = options.VirtualPathRoot;
+               SilkierQuartzAuthenticateConfig.UserName = options.AccountName;
+               SilkierQuartzAuthenticateConfig.UserPassword = options.AccountPassword;
+               SilkierQuartzAuthenticateConfig.IsPersist = options.IsAuthenticationPersist;
                endpoints.MapControllerRoute($"{nameof(SilkierQuartz)}Authenticate",
                    $"{options.VirtualPathRoot}{{controller=Authenticate}}/{{action=Login}}");
            });
@@ -166,8 +169,6 @@ namespace SilkierQuartz
 
         public static IServiceCollection AddSilkierQuartz(this IServiceCollection services, Action<NameValueCollection> stdSchedulerFactoryOptions = null,Func<List<Assembly>> jobsasmlist=null)
         {
-            services.AddSingleton(x => new SilkierQuartzAuthenticateOptions()
-                {UserName = "admin", Password = "password"});
             services.AddControllers()
                 .AddApplicationPart(Assembly.GetExecutingAssembly())
                 .AddNewtonsoftJson();

@@ -10,5 +10,7 @@ namespace SilkierQuartz.Models
         public string Password { get; set; }
 
         public bool IsPersist { get; set; }
+
+        public bool IsLoginError { get; set; }
     }
 }

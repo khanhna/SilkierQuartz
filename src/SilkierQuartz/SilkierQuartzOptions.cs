@@ -23,6 +23,8 @@ namespace SilkierQuartz
 
         public IScheduler Scheduler { get; set; }
 
+        public string AccountName { get; set; }
+        public string AccountPassword { get; set; }
         public bool IsAuthenticationPersist { get; set; }
 
         /// <summary>

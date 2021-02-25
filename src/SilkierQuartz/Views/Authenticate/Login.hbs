@@ -8,9 +8,8 @@
             Login
         </h1>
     </div>
-
+    {{#with Model}}
     <div class="ui segment" style="width: 700px; height: 250px;">
-        {{#with Model}}
         <div>
             <div class="field accept-error">
                 <label>Name</label>
@@ -24,7 +23,7 @@
             <div class="field accept-error">
                 <div class="ui checkbox">
                     <input type="checkbox" value="False" {{IsPersist}} />
-                    <label>Requests Recovery</label>
+                    <label>Remember Me</label>
                 </div>
             </div>
         </div>
@@ -33,8 +32,13 @@
                 <button type="submit" class="ui primary button">Login</button>
             </div>
         </div>
-        {{/with}}
     </div>
+    {{#if IsLoginError}}
+    <div class="ui negative message">
+        <p>User Name or Password is incorrect!</p>
+    </div>
+    {{/if}}
+    {{/with}}
 </form>
 
 <script src="Content/Scripts/post-validation.js"></script>
