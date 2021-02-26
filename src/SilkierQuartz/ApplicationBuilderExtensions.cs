@@ -14,6 +14,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
+using System.Security.Policy;
+using Microsoft.AspNetCore.Http.Extensions;
+using SilkierQuartz.Middlewares;
 
 namespace SilkierQuartz
 {
@@ -61,7 +64,7 @@ namespace SilkierQuartz
         public static IApplicationBuilder UseSilkierQuartz(this IApplicationBuilder app, SilkierQuartzOptions options, Action<Services> configure = null)
         {
             options = options ?? throw new ArgumentNullException(nameof(options));
-
+            
             app.UseFileServer(options);
             if (options.Scheduler == null)
             {
@@ -86,10 +89,18 @@ namespace SilkierQuartz
                 context.Items[typeof(Services)] = services;
                 await next.Invoke();
             });
-
+            
             app.UseEndpoints(endpoints =>
            {
                endpoints.MapControllerRoute(nameof(SilkierQuartz), $"{options.VirtualPathRoot}/{{controller=Scheduler}}/{{action=Index}}");
+
+               SilkierQuartzAuthenticateConfig.VirtualPathRoot = options.VirtualPathRoot;
+               SilkierQuartzAuthenticateConfig.VirtualPathRootUrlEncode = options.VirtualPathRoot.Replace("/", "%2F");
+               SilkierQuartzAuthenticateConfig.UserName = options.AccountName;
+               SilkierQuartzAuthenticateConfig.UserPassword = options.AccountPassword;
+               SilkierQuartzAuthenticateConfig.IsPersist = options.IsAuthenticationPersist;
+               endpoints.MapControllerRoute($"{nameof(SilkierQuartz)}Authenticate",
+                   $"{options.VirtualPathRoot}{{controller=Authenticate}}/{{action=Login}}");
            });
 
             var types = GetSilkierQuartzJobs();
@@ -165,6 +176,31 @@ namespace SilkierQuartz
             services.AddControllers()
                 .AddApplicationPart(Assembly.GetExecutingAssembly())
                 .AddNewtonsoftJson();
+
+            services.AddAuthentication(SilkierQuartzAuthenticateConfig.AuthScheme).AddCookie(
+                SilkierQuartzAuthenticateConfig.AuthScheme,
+                cfg =>
+                {
+                    cfg.Cookie.Name = SilkierQuartzAuthenticateConfig.AuthScheme;
+                    cfg.LoginPath = $"{SilkierQuartzAuthenticateConfig.VirtualPathRoot}/Authenticate/Login";
+                    cfg.AccessDeniedPath = $"{SilkierQuartzAuthenticateConfig.VirtualPathRoot}/Authenticate/Login";
+                    if (SilkierQuartzAuthenticateConfig.IsPersist)
+                    {
+                        cfg.ExpireTimeSpan = TimeSpan.FromDays(7);
+                        cfg.SlidingExpiration = true;
+                    }
+                });
+
+            services.AddAuthorization(opts =>
+            {
+                opts.AddPolicy(SilkierQuartzAuthenticateConfig.AuthScheme, authBuilder =>
+                {
+                    authBuilder.RequireAuthenticatedUser();
+                    authBuilder.RequireClaim(SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaim,
+                        SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaimValue);
+                });
+            });
+
             services.UseQuartzHostedService(stdSchedulerFactoryOptions);
             
             var types = GetSilkierQuartzJobs(jobsasmlist?.Invoke());
@@ -199,6 +235,20 @@ namespace SilkierQuartz
                 }
             }
             return _silkierQuartzJobs;
+        }
+        /// <summary>
+        /// Adds the <see cref="SilkierQuartzAuthenticationMiddleware"/> to the specified <see cref="IApplicationBuilder"/>, which enables simple authentication for silkier Quartz.
+        /// </summary>
+        /// <param name="app">The <see cref="IApplicationBuilder"/> to add the middleware to.</param>
+        /// <returns>A reference to this instance after the operation has completed.</returns>
+        public static IApplicationBuilder AddSilkierQuartzAuthentication(this IApplicationBuilder app)
+        {
+            if (app == null)
+            {
+                throw new ArgumentNullException(nameof(app));
+            }
+
+            return app.UseMiddleware<SilkierQuartzAuthenticationMiddleware>();
         }
     }
 }
