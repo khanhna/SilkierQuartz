@@ -14,6 +14,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
+using System.Security.Policy;
+using Microsoft.AspNetCore.Http.Extensions;
+using SilkierQuartz.Middlewares;
 
 namespace SilkierQuartz
 {
@@ -61,6 +64,7 @@ namespace SilkierQuartz
         public static IApplicationBuilder UseSilkierQuartz(this IApplicationBuilder app, SilkierQuartzOptions options, Action<Services> configure = null)
         {
             options = options ?? throw new ArgumentNullException(nameof(options));
+            
 
             app.UseFileServer(options);
             if (options.Scheduler == null)
@@ -90,8 +94,10 @@ namespace SilkierQuartz
             app.UseEndpoints(endpoints =>
            {
                endpoints.MapControllerRoute(nameof(SilkierQuartz), $"{options.VirtualPathRoot}/{{controller=Scheduler}}/{{action=Index}}");
+               //endpoints.MapControllerRoute(nameof(SilkierQuartz), $"{options.VirtualPathRoot}/{{controller=Authenticate}}/{{action=Login}}");
 
                SilkierQuartzAuthenticateConfig.VirtualPathRoot = options.VirtualPathRoot;
+               SilkierQuartzAuthenticateConfig.VirtualPathRootUrlEncode = options.VirtualPathRoot.Replace("/", "%2F");
                SilkierQuartzAuthenticateConfig.UserName = options.AccountName;
                SilkierQuartzAuthenticateConfig.UserPassword = options.AccountPassword;
                SilkierQuartzAuthenticateConfig.IsPersist = options.IsAuthenticationPersist;
@@ -192,7 +198,8 @@ namespace SilkierQuartz
                 opts.AddPolicy(SilkierQuartzAuthenticateConfig.AuthScheme, authBuilder =>
                 {
                     authBuilder.RequireAuthenticatedUser();
-                    authBuilder.RequireClaim(SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaim);
+                    authBuilder.RequireClaim(SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaim,
+                        SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaimValue);
                 });
             });
 

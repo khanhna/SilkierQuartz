@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Quartz;
+using SilkierQuartz.Middlewares;
 
 namespace SilkierQuartz.Example
 {
@@ -27,6 +28,7 @@ namespace SilkierQuartz.Example
         {
             services.AddRazorPages();
             services.AddSilkierQuartz();
+            services.AddHttpContextAccessor();
             services.AddOptions();
             services.Configure<AppSettings>(Configuration);
             services.Configure<InjectProperty>(options => { options.WriteText = "This is inject string"; });
@@ -34,6 +36,26 @@ namespace SilkierQuartz.Example
                     .AddQuartzJob<InjectSampleJob>()
                     .AddQuartzJob<HelloJobSingle>()
                     .AddQuartzJob<InjectSampleJobSingle>();
+
+            // Use cookie authentication.
+            services.AddAuthentication(GlobalConfig.AuthConfig.AuthScheme).AddCookie(GlobalConfig.AuthConfig.AuthScheme,
+                config =>
+                {
+                    config.Cookie.Name = GlobalConfig.AuthConfig.AuthCookieName;
+                    config.LoginPath = "/Error";
+                    config.AccessDeniedPath = "/Index";
+                    config.ExpireTimeSpan = TimeSpan.FromSeconds(GlobalConfig.AuthConfig.SessionIdleValid);
+                    config.SlidingExpiration = true;
+                });
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy(GlobalConfig.AuthConfig.AuthScheme, p =>
+                {
+                    p.RequireAuthenticatedUser();
+                    p.Build();
+                });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -51,6 +73,7 @@ namespace SilkierQuartz.Example
             app.UseStaticFiles();
             app.UseRouting();
             app.UseAuthentication();
+            app.UseMiddleware<SilkierQuartzAuthenticationMiddleware>();
             app.UseAuthorization();
             app.UseSilkierQuartz(
                 new SilkierQuartzOptions()
@@ -68,9 +91,14 @@ namespace SilkierQuartz.Example
                     IsAuthenticationPersist = false
                 }
                 );
+            
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
+
+                //endpoints.MapControllerRoute(
+                //    name: "defaultMVC",
+                //    pattern: "{controller=Home}/{action=Index}/{id?}");
             });
             //How to compatible old code to SilkierQuartz
             //将旧的原来的规划Job的代码进行移植兼容的示例

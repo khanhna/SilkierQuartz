@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SilkierQuartz.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -13,19 +14,27 @@ namespace SilkierQuartz.Controllers
     public class AuthenticateController : PageControllerBase
     {
         [HttpGet]
-        public async Task<IActionResult> Login()
+        public async Task<IActionResult> Login([FromServices] IAuthenticationSchemeProvider schemes)
         {
+            var silkierScheme = await schemes.GetSchemeAsync(SilkierQuartzAuthenticateConfig.AuthScheme);
+
             if (string.IsNullOrEmpty(SilkierQuartzAuthenticateConfig.UserName) ||
                 string.IsNullOrEmpty(SilkierQuartzAuthenticateConfig.UserPassword))
             {
+                foreach (var userClaim in HttpContext.User.Claims)
+                {
+                    Debug.WriteLine($"{userClaim.Type} - {userClaim.Value}");
+                }
+
                 if (HttpContext.User == null || !HttpContext.User.Identity.IsAuthenticated ||
-                    !HttpContext.User.HasClaim(SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaim, "Authorized"))
+                    !HttpContext.User.HasClaim(SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaim,
+                        SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaimValue))
                 {
                     var claims = new List<Claim>
                     {
                         new Claim(ClaimTypes.NameIdentifier, string.IsNullOrEmpty(SilkierQuartzAuthenticateConfig.UserName) ? "SilkierQuartzAdmin" : SilkierQuartzAuthenticateConfig.UserName ),
                         new Claim(ClaimTypes.Name, string.IsNullOrEmpty(SilkierQuartzAuthenticateConfig.UserPassword) ? "SilkierQuartzPassword" : SilkierQuartzAuthenticateConfig.UserPassword),
-                        new Claim(SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaim, "Authorized")
+                        new Claim(SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaim, SilkierQuartzAuthenticateConfig.SilkierQuartzSpecificClaimValue)
                     };
 
                     var authProperties = new AuthenticationProperties()
